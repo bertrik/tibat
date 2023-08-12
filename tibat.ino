@@ -89,7 +89,7 @@ ISR(RTC_CNT_vect){
 }
 
 //Init I/O, timers, interrupts etc...
-void init(void){
+void setup(void) {
     	//Set clock to 10MHz, should work from 2.7V and up.
       _PROTECTED_WRITE(CLKCTRL_MCLKCTRLA, CLKCTRL_CLKSEL_OSC20M_gc);
       _PROTECTED_WRITE(CLKCTRL_MCLKCTRLB, CLKCTRL_PEN_bm | CLKCTRL_PDIV_2X_gc);
@@ -133,52 +133,45 @@ void init(void){
       sei();
 }
 
-
-
-int main(void)
+void loop(void)
 {
-    init();
-
-    while (1) 
-    {
-        //Check sleepiness
-        if (Zzz) {
-            //beep
-            PORTA_DIRSET = (1<<AOUT);
-            for (uint16_t a=50; a<255; ++a){
-              _delay_loop_2(a<<5);
-              PORTA_OUTTGL = (1<<AOUT);
-            }
-
-            //Turn off all outputs, RTC too and reset RTC
-            PORTA_OUT = 0;
-            while(RTC_STATUS & 0x01);
-            RTC_CTRLA &= 0xFE; 
-            while(RTC_STATUS & 0x02);
-            RTC_CNT   = 0;            
-            
-            //Sleep (and unsleep after wake to be sure)
-            sleep_enable();
-            sleep_cpu();
-            sleep_disable();
+    //Check sleepiness
+    if (Zzz) {
+        //beep
+        PORTA_DIRSET = (1<<AOUT);
+        for (uint16_t a=50; a<255; ++a){
+          _delay_loop_2(a<<5);
+          PORTA_OUTTGL = (1<<AOUT);
         }
 
-        //Auto turn off underflow protection
-        if(RTC_CNT > 300) RTC_CNT = 300;
+        //Turn off all outputs, RTC too and reset RTC
+        PORTA_OUT = 0;
+        while(RTC_STATUS & 0x01);
+        RTC_CTRLA &= 0xFE; 
+        while(RTC_STATUS & 0x02);
+        RTC_CNT   = 0;
 
-        //Check if output pin should be toggled or be turned off. This produces "sound".
-        if (fDiv < 2) fDiv = 2;
-        if (cntAC >= (fDiv>>1)){
-            if (cntAC == 0xFF){
-                //Off
-                PORTA_DIRCLR = (1<<AOUT);
-                PORTA_OUTCLR = (1<<AOUT);
-            } else {
-                //Toggle
-                cntAC -= (fDiv>>1);
-                PORTA_DIRSET = (1<<AOUT);
-                PORTA_OUTTGL = (1<<AOUT);
-            }
+        //Sleep (and unsleep after wake to be sure)
+        sleep_enable();
+        sleep_cpu();
+        sleep_disable();
+    }
+
+    //Auto turn off underflow protection
+    if(RTC_CNT > 300) RTC_CNT = 300;
+
+    //Check if output pin should be toggled or be turned off. This produces "sound".
+    if (fDiv < 2) fDiv = 2;
+    if (cntAC >= (fDiv>>1)){
+        if (cntAC == 0xFF){
+            //Off
+            PORTA_DIRCLR = (1<<AOUT);
+            PORTA_OUTCLR = (1<<AOUT);
+        } else {
+            //Toggle
+            cntAC -= (fDiv>>1);
+            PORTA_DIRSET = (1<<AOUT);
+            PORTA_OUTTGL = (1<<AOUT);
         }
     }
 }
